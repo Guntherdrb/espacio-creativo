@@ -44,5 +44,8 @@ def descargar_archivo(nombre_archivo):
     ruta_archivo = f"./{nombre_archivo}"
     return send_file(ruta_archivo, as_attachment=True)
 
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    import os
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
