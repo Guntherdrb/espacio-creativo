@@ -93,10 +93,15 @@ def generar_presupuesto():
             planos=planos
         )
 
+        # Construir URL de descarga completa para que sea clickable en UI
+        archivo_nombre = os.path.basename(nombre_archivo)
+        # request.host_url incluye el esquema y host con slash final
+        base_url = request.host_url.rstrip('/')
+        descarga_url = f"{base_url}/descargar/{archivo_nombre}"
         return jsonify({
             "mensaje": "✅ Presupuesto generado correctamente",
-            "archivo": os.path.basename(nombre_archivo),
-            "url_descarga": f"/descargar/{os.path.basename(nombre_archivo)}"
+            "archivo": archivo_nombre,
+            "url_descarga": descarga_url
         })
 
     except Exception as e:
