@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify, send_file
 from pdf_generator import crear_presupuesto_pdf
 import os
 import traceback
+import re
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -14,24 +16,33 @@ def generar_presupuesto():
     try:
         datos = request.form
 
-        # Recolectar datos con valores por defecto
-        nombre_empresa = datos.get('nombre_empresa', 'N/A')
-        nombre_cliente = datos.get('nombre_cliente', 'N/A')
-        ciudad = datos.get('ciudad', 'N/A')
-        direccion = datos.get('direccion', 'N/A')
-        espacio = datos.get('espacio', 'N/A')
-        numero_presupuesto = datos.get('numero_presupuesto', '0001')
+        # Recolectar datos seguros
+        nombre_empresa = datos.get('nombre_empresa', 'Empresa Desconocida')
+        nombre_cliente = datos.get('nombre_cliente', 'Cliente Desconocido')
+        ciudad = datos.get('ciudad', 'Ciudad no especificada')
+        direccion = datos.get('direccion', 'Dirección no especificada')
+        espacio = datos.get('espacio', 'Espacio no especificado')
+        # Obtener o generar automáticamente el número de presupuesto
+        numero_presupuesto = datos.get('numero_presupuesto')
+        if not numero_presupuesto:
+            numero_presupuesto = datetime.now().strftime('%Y%m%d%H%M%S')
 
         try:
             total = float(datos.get('total', 0))
         except ValueError:
             total = 0
 
-        # Crear carpeta uploads si no existe
+        # Crear carpetas necesarias
         upload_dir = './uploads'
+        output_dir = './outputs'
         os.makedirs(upload_dir, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
 
-        # Guardar logo si viene
+        # Preparar nombre de archivo seguro a partir del número de presupuesto
+        safe_numero = re.sub(r'[^A-Za-z0-9_-]', '_', numero_presupuesto)
+        nombre_archivo = os.path.join(output_dir, f"presupuesto_{safe_numero}.pdf")
+
+        # Guardar logo
         logo_path = None
         logo = request.files.get('logo')
         if logo:
@@ -65,9 +76,9 @@ def generar_presupuesto():
         except Exception:
             lista_items = []
 
-        # Crear PDF
-        nombre_archivo = f"presupuesto_{nombre_cliente.replace(' ', '_')}.pdf"
+        # Llamar función para crear PDF
         crear_presupuesto_pdf(
+            nombre_archivo=nombre_archivo,
             nombre_empresa=nombre_empresa,
             nombre_cliente=nombre_cliente,
             ciudad=ciudad,
@@ -83,13 +94,12 @@ def generar_presupuesto():
         )
 
         return jsonify({
-            "mensaje": "Presupuesto generado correctamente",
-            "archivo": nombre_archivo,
-            "url_descarga": f"/descargar/{nombre_archivo}"
+            "mensaje": "✅ Presupuesto generado correctamente",
+            "archivo": os.path.basename(nombre_archivo),
+            "url_descarga": f"/descargar/{os.path.basename(nombre_archivo)}"
         })
 
     except Exception as e:
-        # Log completo para Railway
         print("❌ ERROR INTERNO:", str(e))
         print(traceback.format_exc())
         return jsonify({
@@ -99,7 +109,7 @@ def generar_presupuesto():
 
 @app.route('/descargar/<nombre_archivo>')
 def descargar_archivo(nombre_archivo):
-    ruta_archivo = f"./{nombre_archivo}"
+    ruta_archivo = os.path.join('./outputs', nombre_archivo)
     if os.path.exists(ruta_archivo):
         return send_file(ruta_archivo, as_attachment=True)
     else:
