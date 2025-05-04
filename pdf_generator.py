@@ -1,18 +1,32 @@
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from reportlab.lib.utils import ImageReader
 import os
 from datetime import datetime
 
-def crear_presupuesto_pdf(nombre_cliente, ciudad, direccion, lista_items, total, numero_presupuesto, nombre_archivo='presupuesto.pdf', logo_path=None, cutlist_resultado=None, imagenes_gpt=[], imagenes_cliente=[], planos=[]):
+def crear_presupuesto_pdf(
+    nombre_empresa,
+    nombre_cliente,
+    ciudad,
+    direccion,
+    espacio,
+    lista_items,
+    total,
+    numero_presupuesto,
+    logo_path=None,
+    imagenes_gpt=None,
+    imagenes_cliente=None,
+    planos=None,
+    cutlist_resultado=None
+):
+    nombre_archivo = f"presupuesto_{nombre_cliente.replace(' ', '_')}.pdf"
     c = canvas.Canvas(nombre_archivo, pagesize=letter)
     width, height = letter
-    
-    # Encabezado con logo
+
+    # Encabezado con logo y empresa
     if logo_path and os.path.exists(logo_path):
         c.drawImage(logo_path, 50, height - 100, width=100, height=50, preserveAspectRatio=True)
     c.setFont("Helvetica-Bold", 20)
-    c.drawString(200, height - 50, "PRESUPUESTO DE MOBILIARIO")
+    c.drawString(200, height - 50, f"PRESUPUESTO - {nombre_empresa}")
 
     # Datos del cliente
     c.setFont("Helvetica", 12)
@@ -21,8 +35,9 @@ def crear_presupuesto_pdf(nombre_cliente, ciudad, direccion, lista_items, total,
     c.drawString(50, height - 150, f"Cliente: {nombre_cliente}")
     c.drawString(50, height - 170, f"Ciudad: {ciudad}")
     c.drawString(50, height - 190, f"Dirección: {direccion}")
+    c.drawString(50, height - 210, f"Espacio: {espacio}")
 
-    y = height - 220
+    y = height - 240
     c.setFont("Helvetica-Bold", 12)
     c.drawString(50, y, "Detalle de mobiliario presupuestado:")
     y -= 20
@@ -36,12 +51,12 @@ def crear_presupuesto_pdf(nombre_cliente, ciudad, direccion, lista_items, total,
     y -= 20
 
     c.setFont("Helvetica", 10)
-    for item in lista_items:
-        subtotal = item['cantidad'] * item['precio_unitario']
-        c.drawString(50, y, item['codigo'])
-        c.drawString(100, y, item['descripcion'])
-        c.drawString(250, y, str(item['cantidad']))
-        c.drawString(320, y, f"${item['precio_unitario']}")
+    for item in lista_items or []:
+        subtotal = item.get('cantidad', 0) * item.get('precio_unitario', 0)
+        c.drawString(50, y, str(item.get('codigo', '')))
+        c.drawString(100, y, str(item.get('descripcion', '')))
+        c.drawString(250, y, str(item.get('cantidad', 0)))
+        c.drawString(320, y, f"${item.get('precio_unitario', 0)}")
         c.drawString(420, y, f"${subtotal}")
         y -= 20
         if y < 100:
@@ -67,7 +82,7 @@ def crear_presupuesto_pdf(nombre_cliente, ciudad, direccion, lista_items, total,
         c.drawString(50, y, f"Tableros necesarios: {cutlist_resultado.get('tableros_necesarios', 0)}")
         y -= 40
 
-    # Sección imágenes generadas por GPT
+    # Imágenes GPT
     if imagenes_gpt:
         c.setFont("Helvetica-Bold", 12)
         c.drawString(50, y, "Propuestas visuales generadas por Espacio Creativo:")
@@ -80,7 +95,7 @@ def crear_presupuesto_pdf(nombre_cliente, ciudad, direccion, lista_items, total,
                     c.showPage()
                     y = height - 50
 
-    # Sección imágenes enviadas por el cliente
+    # Imágenes cliente
     if imagenes_cliente:
         c.setFont("Helvetica-Bold", 12)
         c.drawString(50, y, "Imágenes enviadas por el cliente:")
@@ -93,7 +108,7 @@ def crear_presupuesto_pdf(nombre_cliente, ciudad, direccion, lista_items, total,
                     c.showPage()
                     y = height - 50
 
-    # Sección planos
+    # Planos
     if planos:
         c.setFont("Helvetica-Bold", 12)
         c.drawString(50, y, "Planos con medidas:")
