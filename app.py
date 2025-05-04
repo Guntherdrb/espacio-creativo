@@ -13,50 +13,41 @@ def generar_presupuesto():
     try:
         datos = request.form
 
-        # Validar campos obligatorios
-        nombre_cliente = datos.get('nombre_cliente')
-        ciudad = datos.get('ciudad')
-        direccion = datos.get('direccion')
-        lista_items = datos.get('lista_items')
-        total = datos.get('total')
+        # Recolectar datos, si faltan usar 'N/A' o valores por defecto
+        nombre_empresa = datos.get('nombre_empresa', 'N/A')
+        nombre_cliente = datos.get('nombre_cliente', 'N/A')
+        ciudad = datos.get('ciudad', 'N/A')
+        direccion = datos.get('direccion', 'N/A')
+        espacio = datos.get('espacio', 'N/A')
+        numero_presupuesto = datos.get('numero_presupuesto', '0001')
+        total = float(datos.get('total', 0))
 
-        if not nombre_cliente:
-            return jsonify({"error": "Falta el nombre del cliente."}), 400
-        if not ciudad:
-            return jsonify({"error": "Falta la ciudad."}), 400
-        if not direccion:
-            return jsonify({"error": "Falta la dirección."}), 400
-        if not lista_items:
-            return jsonify({"error": "Falta la lista de ítems."}), 400
-        if not total:
-            return jsonify({"error": "Falta el total."}), 400
-
-        nombre_archivo = f"presupuesto_{nombre_cliente.replace(' ', '_')}.pdf"
+        # Crear carpeta uploads si no existe
         upload_dir = './uploads'
         os.makedirs(upload_dir, exist_ok=True)
 
-        # Guardar logo (opcional)
-        logo = request.files.get('logo')
+        # Guardar logo si viene
         logo_path = None
+        logo = request.files.get('logo')
         if logo:
             logo_path = os.path.join(upload_dir, logo.filename)
             logo.save(logo_path)
 
-        # Guardar imágenes GPT (opcional)
+        # Guardar imágenes GPT
         imagenes_gpt = []
         for file in request.files.getlist('imagenes_gpt'):
             img_path = os.path.join(upload_dir, file.filename)
             file.save(img_path)
             imagenes_gpt.append(img_path)
 
-        # Guardar imágenes cliente (opcional)
+        # Guardar imágenes cliente
         imagenes_cliente = []
         for file in request.files.getlist('imagenes_cliente'):
             img_path = os.path.join(upload_dir, file.filename)
             file.save(img_path)
             imagenes_cliente.append(img_path)
 
-        # Guardar planos (opcional)
+        # Guardar planos
         planos = []
         for file in request.files.getlist('planos'):
             plano_path = os.path.join(upload_dir, file.filename)
@@ -64,18 +55,22 @@ def generar_presupuesto():
             planos.append(plano_path)
 
         # Convertir lista_items
-        lista_items = eval(lista_items)
-        cutlist_resultado = eval(datos.get('cutlist', 'None'))
+        try:
+            lista_items = eval(datos.get('lista_items', '[]'))  # Si no viene nada, usar lista vacía
+        except Exception:
+            lista_items = []
 
+        # Crear PDF
+        nombre_archivo = f"presupuesto_{nombre_cliente.replace(' ', '_')}.pdf"
         crear_presupuesto_pdf(
+            nombre_empresa=nombre_empresa,
             nombre_cliente=nombre_cliente,
             ciudad=ciudad,
             direccion=direccion,
+            espacio=espacio,
             lista_items=lista_items,
-            total=float(total),
-            cutlist_resultado=cutlist_resultado,
-            nombre_archivo=nombre_archivo,
-            numero_presupuesto=datos.get('numero_presupuesto', '0001'),
+            total=total,
+            numero_presupuesto=numero_presupuesto,
             logo_path=logo_path,
             imagenes_gpt=imagenes_gpt,
             imagenes_cliente=imagenes_cliente,
@@ -83,13 +78,13 @@ def generar_presupuesto():
         )
 
         return jsonify({
-            "mensaje": "Presupuesto generado correctamente.",
+            "mensaje": "Presupuesto generado",
             "archivo": nombre_archivo,
             "url_descarga": f"/descargar/{nombre_archivo}"
         })
 
     except Exception as e:
-        return jsonify({"error": f"Error interno al generar presupuesto: {str(e)}"}), 500
+        return jsonify({"mensaje": f"Error al generar presupuesto: {str(e)}"}), 500
 
 @app.route('/descargar/<nombre_archivo>')
 def descargar_archivo(nombre_archivo):
