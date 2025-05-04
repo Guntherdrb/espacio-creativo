@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, send_file
 from pdf_generator import crear_presupuesto_pdf
 import os
-import traceback
 
 app = Flask(__name__)
 
@@ -13,71 +12,67 @@ def index():
 def generar_presupuesto():
     try:
         datos = request.form
-        logo = request.files.get('logo')
 
-        nombre_cliente = datos.get('nombre_cliente', '').replace(' ', '_')
+        # Validar campos obligatorios
+        nombre_cliente = datos.get('nombre_cliente')
+        ciudad = datos.get('ciudad')
+        direccion = datos.get('direccion')
+        lista_items = datos.get('lista_items')
+        total = datos.get('total')
+
         if not nombre_cliente:
-            raise ValueError("Falta el nombre del cliente.")
+            return jsonify({"error": "Falta el nombre del cliente."}), 400
+        if not ciudad:
+            return jsonify({"error": "Falta la ciudad."}), 400
+        if not direccion:
+            return jsonify({"error": "Falta la dirección."}), 400
+        if not lista_items:
+            return jsonify({"error": "Falta la lista de ítems."}), 400
+        if not total:
+            return jsonify({"error": "Falta el total."}), 400
 
-        nombre_archivo = f"presupuesto_{nombre_cliente}.pdf"
-
-        # Crear carpeta uploads si no existe
+        nombre_archivo = f"presupuesto_{nombre_cliente.replace(' ', '_')}.pdf"
         upload_dir = './uploads'
         os.makedirs(upload_dir, exist_ok=True)
 
-        # Guardar logo si viene
+        # Guardar logo (opcional)
+        logo = request.files.get('logo')
         logo_path = None
         if logo:
             logo_path = os.path.join(upload_dir, logo.filename)
             logo.save(logo_path)
 
-        # Guardar imágenes GPT
+        # Guardar imágenes GPT (opcional)
         imagenes_gpt = []
         for file in request.files.getlist('imagenes_gpt'):
-            if file.filename:
-                img_path = os.path.join(upload_dir, file.filename)
-                file.save(img_path)
-                imagenes_gpt.append(img_path)
+            img_path = os.path.join(upload_dir, file.filename)
+            file.save(img_path)
+            imagenes_gpt.append(img_path)
 
-        # Guardar imágenes cliente
+        # Guardar imágenes cliente (opcional)
         imagenes_cliente = []
         for file in request.files.getlist('imagenes_cliente'):
-            if file.filename:
-                img_path = os.path.join(upload_dir, file.filename)
-                file.save(img_path)
-                imagenes_cliente.append(img_path)
+            img_path = os.path.join(upload_dir, file.filename)
+            file.save(img_path)
+            imagenes_cliente.append(img_path)
 
-        # Guardar planos
+        # Guardar planos (opcional)
         planos = []
         for file in request.files.getlist('planos'):
-            if file.filename:
-                plano_path = os.path.join(upload_dir, file.filename)
-                file.save(plano_path)
-                planos.append(plano_path)
+            plano_path = os.path.join(upload_dir, file.filename)
+            file.save(plano_path)
+            planos.append(plano_path)
 
-        # Convertir lista_items y cutlist
-        try:
-            lista_items = eval(datos['lista_items'])  # ¡Debe llegar como string de lista!
-        except Exception:
-            raise ValueError("El campo 'lista_items' no es válido.")
-
-        cutlist_resultado = None
-        if 'cutlist' in datos and datos['cutlist']:
-            try:
-                cutlist_resultado = eval(datos['cutlist'])
-            except Exception:
-                raise ValueError("El campo 'cutlist' no es válido.")
-
-        total = float(datos.get('total', 0))
-        if total <= 0:
-            raise ValueError("El campo 'total' es obligatorio y debe ser mayor a cero.")
+        # Convertir lista_items
+        lista_items = eval(lista_items)
+        cutlist_resultado = eval(datos.get('cutlist', 'None'))
 
         crear_presupuesto_pdf(
-            nombre_cliente=datos['nombre_cliente'],
-            ciudad=datos.get('ciudad', ''),
-            direccion=datos.get('direccion', ''),
+            nombre_cliente=nombre_cliente,
+            ciudad=ciudad,
+            direccion=direccion,
             lista_items=lista_items,
-            total=total,
+            total=float(total),
             cutlist_resultado=cutlist_resultado,
             nombre_archivo=nombre_archivo,
             numero_presupuesto=datos.get('numero_presupuesto', '0001'),
@@ -87,21 +82,19 @@ def generar_presupuesto():
             planos=planos
         )
 
-        print(f"✅ PDF generado exitosamente: {nombre_archivo}")
-        return jsonify({"mensaje": "Presupuesto generado", "archivo": nombre_archivo, "url_descarga": f"/descargar/{nombre_archivo}"})
+        return jsonify({
+            "mensaje": "Presupuesto generado correctamente.",
+            "archivo": nombre_archivo,
+            "url_descarga": f"/descargar/{nombre_archivo}"
+        })
 
     except Exception as e:
-        error_trace = traceback.format_exc()
-        print(f"❌ ERROR INTERNO: {str(e)}\n{error_trace}")
-        return jsonify({"mensaje": f"Error al generar presupuesto: {str(e)}"}), 500
+        return jsonify({"error": f"Error interno al generar presupuesto: {str(e)}"}), 500
 
 @app.route('/descargar/<nombre_archivo>')
 def descargar_archivo(nombre_archivo):
     ruta_archivo = f"./{nombre_archivo}"
-    if os.path.exists(ruta_archivo):
-        return send_file(ruta_archivo, as_attachment=True)
-    else:
-        return jsonify({"mensaje": f"Archivo no encontrado: {nombre_archivo}"}), 404
+    return send_file(ruta_archivo, as_attachment=True)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
