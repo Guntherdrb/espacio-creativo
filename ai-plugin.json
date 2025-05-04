@@ -1,0 +1,16 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Espacio Creativo",
+  "name_for_model": "espacio_creativo",
+  "description_for_human": "Genera presupuestos PDF, cálculos y diseños de espacios",
+  "description_for_model": "Plugin para generar, descargar y gestionar presupuestos en PDF",
+  "auth": { "type": "none" },
+  "api": {
+    "type": "openapi",
+    "url": "https://espacio-creativo-production.up.railway.app/.well-known/openapi.json",
+    "is_user_authenticated": false
+  },
+  "logo_url": "https://espacio-creativo-production.up.railway.app/logo.png",
+  "contact_email": "soporte@espacio-creativo.com",
+  "legal_info_url": "https://espacio-creativo.com/legal"
+}
