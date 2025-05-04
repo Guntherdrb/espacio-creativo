@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Entorno virtual
+venv/
+.venv/
+
+# Archivos de configuración de entorno local
+.env
+
+# Archivos generados
+*.pdf
+*.png
+*.jpg
+*.jpeg
+uploads/
+output/
+
+# Logs
+*.log
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
