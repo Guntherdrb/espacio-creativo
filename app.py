@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, send_file
 from pdf_generator import crear_presupuesto_pdf
 import os
+import traceback
 
 app = Flask(__name__)
 
@@ -13,14 +14,18 @@ def generar_presupuesto():
     try:
         datos = request.form
 
-        # Recolectar datos, si faltan usar 'N/A' o valores por defecto
+        # Recolectar datos con valores por defecto
         nombre_empresa = datos.get('nombre_empresa', 'N/A')
         nombre_cliente = datos.get('nombre_cliente', 'N/A')
         ciudad = datos.get('ciudad', 'N/A')
         direccion = datos.get('direccion', 'N/A')
         espacio = datos.get('espacio', 'N/A')
         numero_presupuesto = datos.get('numero_presupuesto', '0001')
-        total = float(datos.get('total', 0))
+
+        try:
+            total = float(datos.get('total', 0))
+        except ValueError:
+            total = 0
 
         # Crear carpeta uploads si no existe
         upload_dir = './uploads'
@@ -56,7 +61,7 @@ def generar_presupuesto():
 
         # Convertir lista_items
         try:
-            lista_items = eval(datos.get('lista_items', '[]'))  # Si no viene nada, usar lista vacía
+            lista_items = eval(datos.get('lista_items', '[]'))
         except Exception:
             lista_items = []
 
@@ -78,18 +83,27 @@ def generar_presupuesto():
         )
 
         return jsonify({
-            "mensaje": "Presupuesto generado",
+            "mensaje": "Presupuesto generado correctamente",
             "archivo": nombre_archivo,
             "url_descarga": f"/descargar/{nombre_archivo}"
         })
 
     except Exception as e:
-        return jsonify({"mensaje": f"Error al generar presupuesto: {str(e)}"}), 500
+        # Log completo para Railway
+        print("❌ ERROR INTERNO:", str(e))
+        print(traceback.format_exc())
+        return jsonify({
+            "mensaje": f"Error al generar presupuesto: {str(e)}",
+            "detalle": traceback.format_exc()
+        }), 500
 
 @app.route('/descargar/<nombre_archivo>')
 def descargar_archivo(nombre_archivo):
     ruta_archivo = f"./{nombre_archivo}"
-    return send_file(ruta_archivo, as_attachment=True)
+    if os.path.exists(ruta_archivo):
+        return send_file(ruta_archivo, as_attachment=True)
+    else:
+        return jsonify({"mensaje": "Archivo no encontrado"}), 404
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
