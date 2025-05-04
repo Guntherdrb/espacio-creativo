@@ -7,6 +7,14 @@ from datetime import datetime
 
 app = Flask(__name__)
 
+# Exponer especificación OpenAPI para ChatGPT Plugins
+@app.route('/.well-known/openapi.json', methods=['GET'])
+def openapi_spec():
+    spec_path = os.path.join(app.root_path, '.well-known', 'openapi.json')
+    if os.path.exists(spec_path):
+        return send_file(spec_path, mimetype='application/json')
+    return jsonify({"error": "Especificación no encontrada"}), 404
+
 @app.route('/')
 def index():
     return "¡Servidor Flask de Espacio Creativo funcionando!"
@@ -116,10 +124,21 @@ def generar_presupuesto():
 def descargar_archivo(nombre_archivo):
     ruta_archivo = os.path.join('./outputs', nombre_archivo)
     if os.path.exists(ruta_archivo):
-        return send_file(ruta_archivo, as_attachment=True)
+        # Enviar PDF con cabeceras para permitir CORS en ChatGPT Plugin UI
+        response = send_file(ruta_archivo, as_attachment=True)
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
     else:
         return jsonify({"mensaje": "Archivo no encontrado"}), 404
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+    return response
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+    

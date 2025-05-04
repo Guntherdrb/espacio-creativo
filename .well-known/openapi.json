@@ -1,0 +1,107 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Espacio Creativo Backend API",
+    "version": "1.2.0"
+  },
+  "servers": [
+    { "url": "https://espacio-creativo-production.up.railway.app" }
+  ],
+  "paths": {
+    "/generar_presupuesto": {
+      "post": {
+        "summary": "Generar presupuesto completo en PDF (con imágenes, planos y datos)",
+        "operationId": "generarPresupuesto",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre_empresa": { "type": "string" },
+                  "nombre_cliente": { "type": "string" },
+                  "ciudad": { "type": "string" },
+                  "direccion": { "type": "string" },
+                  "espacio": { "type": "string" },
+                  "numero_presupuesto": { "type": "string" },
+                  "total": { "type": "number" },
+                  "lista_items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "codigo": { "type": "string" },
+                        "descripcion": { "type": "string" },
+                        "cantidad": { "type": "integer" },
+                        "precio_unitario": { "type": "number" }
+                      },
+                      "required": ["codigo", "descripcion", "cantidad", "precio_unitario"]
+                    }
+                  },
+                  "logo": { "type": "string", "format": "binary" },
+                  "imagenes_gpt": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "binary" }
+                  },
+                  "imagenes_cliente": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "binary" }
+                  },
+                  "planos": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "binary" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Presupuesto generado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "mensaje": { "type": "string" },
+                    "archivo": { "type": "string" },
+                    "url_descarga": { "type": "string", "format": "uri" }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "description": "Error interno al generar el presupuesto" }
+        }
+      }
+    },
+    "/descargar/{nombre_archivo}": {
+      "get": {
+        "summary": "Descargar PDF de presupuesto generado",
+        "operationId": "descargarPresupuesto",
+        "parameters": [
+          {
+            "name": "nombre_archivo",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Nombre del archivo PDF a descargar"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archivo PDF",
+            "content": {
+              "application/pdf": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          },
+          "404": { "description": "Archivo no encontrado" }
+        }
+      }
+    }
+  }
+}
